@@ -283,7 +283,7 @@ function factCheckHtml(p) {
   const fc = p.factCheck;
   if (!fc) return `<details class="ref-notes"><summary>Fact-check (not in the book)</summary>
     <p class="ref-notes-empty">Not fact-checked yet.</p></details>`;
-  const mark = ok => ok === false ? '<span class="fc-flag">✗</span>' : '<span class="fc-ok">✓</span>';
+  const mark = ok => ok === false ? '<span class="fc-flag">✗</span>' : ok === 'fixed' ? '<span class="fc-ok" title="Fixed by an approved change">✓ fixed</span>' : '<span class="fc-ok">✓</span>';
   const tr = (fc.translation || []).map(r => `<tr><td>${mark(r.ok)}</td><td lang="fr">${escapeHtml(r.fr)}</td>
     <td>${escapeHtml(r.en)}${r.note ? `<div class="fc-note">${escapeHtml(r.note)}</div>` : ''}</td></tr>`).join('');
   const bg = (fc.background || []).map(r => `<tr><td>${mark(r.ok)}</td><td>${escapeHtml(r.claim)}</td>
