@@ -135,10 +135,145 @@ async function photoUrl(file) {
   }
 }
 
+// ── Where the panels stand (data/places.json) ────────────────
+// Every panel's position, written or not, taken from the author's own Google My Maps
+// (scripts/build_places.py). Private like the panels: read with the key on the website
+// and kept on the device for offline use.
+
+let PLACES = null;
+
+async function loadPlaces() {
+  if (PLACES) return PLACES;
+  const cacheKey = new Request('./private-data/places.json');
+  let res = null;
+  try {
+    res = IS_LOCAL
+      ? await fetch('./data/places.json', { cache: 'no-store' })
+      : await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/data/places.json`, {
+          headers: { Authorization: `Bearer ${readKey()}`, Accept: 'application/vnd.github.raw',
+                     'X-GitHub-Api-Version': '2022-11-28' },
+          cache: 'no-store',
+        });
+    if (res.ok && !IS_LOCAL) (await caches.open(PHOTO_CACHE)).put(cacheKey, res.clone());
+  } catch { res = null; }
+  if (!res || !res.ok) {
+    try { res = await (await caches.open(PHOTO_CACHE)).match(cacheKey); } catch { res = null; }
+  }
+  PLACES = res ? await res.json() : [];
+  return PLACES;
+}
+
+// Maps use the same engine and map style as Maperati (MapLibre, OpenFreeMap tiles from
+// OpenStreetMap data). They need an internet connection; the text doesn't.
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+
+function pinElement(label, written, size = 26) {
+  const el = document.createElement('div');
+  el.className = 'map-pin' + (written ? ' written' : '');
+  el.style.width = el.style.height = `${size}px`;
+  el.textContent = label;
+  return el;
+}
+
+// Draw a map in `container` with numbered pins. pins: [{lat, lng, label, written, title, href}]
+function drawMap(container, pins, { zoom = 16 } = {}) {
+  if (typeof maplibregl === 'undefined') {
+    container.innerHTML = '<p class="map-offline">The map needs an internet connection.</p>';
+    return null;
+  }
+  const map = new maplibregl.Map({
+    container, style: MAP_STYLE, attributionControl: false,
+    center: [pins[0].lng, pins[0].lat], zoom, cooperativeGestures: PHONE,
+  });
+  map.addControl(new maplibregl.AttributionControl({ compact: true }));   // the map style supplies its own credit
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  for (const p of pins) {
+    const el = pinElement(p.label, p.written);
+    el.title = p.title;
+    if (p.href) { el.classList.add('link'); el.addEventListener('click', () => { location.hash = p.href; }); }
+    const marker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]);
+    if (!p.href) marker.setPopup(new maplibregl.Popup({ offset: 14, closeButton: false })
+      .setHTML(`<b>${escapeHtml(p.label)}. ${escapeHtml(p.title)}</b><br><span>Not yet written</span>`));
+    marker.addTo(map);
+  }
+  if (pins.length > 1) {
+    const b = new maplibregl.LngLatBounds();
+    pins.forEach(p => b.extend([p.lng, p.lat]));
+    map.fitBounds(b, { padding: 40, maxZoom: 17, duration: 0 });
+  }
+  return map;
+}
+
+// The arrondissement's panels as a Maperati map (its read-only view, as the
+// Paris Parks walks guide uses), encoded the way Maperati's share.js does.
+function maperatiLink(arr, places) {
+  const stops = places.filter(p => p.lat != null).map(p =>
+    [+p.lat.toFixed(5), +p.lng.toFixed(5), 0, 'monument', `${p.number ?? '–'}. ${p.title}`]);
+  const payload = { v: 1, n: `Paris History Plaques — ${arrName(arr)}`, m: 'walking', t: '', r: '', s: stops };
+  const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `https://mchughde.github.io/maperati/v3/embed.html#${b64}`;
+}
+
+// The same pins as a GeoJSON file, which Maperati's Import can load for planning a walk.
+function geojsonDownload(arr, places) {
+  const fc = { type: 'FeatureCollection', features: places.filter(p => p.lat != null).map(p => ({
+    type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+    properties: { name: `${p.number ?? '–'}. ${p.title}`, category: 'monument' } })) };
+  return URL.createObjectURL(new Blob([JSON.stringify(fc, null, 1)], { type: 'application/geo+json' }));
+}
+
+// ── Render: one arrondissement (map + every panel) ────────────
+
+async function renderArrondissement(arr) {
+  const [places, panels] = await Promise.all([loadPlaces(), getAllPanels()]);
+  const written = new Map(panels.filter(p => p.arrondissement === arr).map(p => [p.number, p]));
+  const mine = places.filter(p => p.arrondissement === arr)
+    .sort((a, b) => (a.number ?? 999) - (b.number ?? 999));
+  const vol = VOLUMES.find(v => v.arrs.includes(arr));
+  const pinned = mine.filter(p => p.lat != null);
+
+  const list = mine.map(p => {
+    const w = p.number != null && written.get(p.number);
+    const num = p.number ?? '–';
+    const flag = p.lat == null ? ' <span class="no-pin">no map position yet</span>'
+      : (p.check ? ' <span class="no-pin">position to check</span>' : '');
+    return w
+      ? `<li class="written"><a href="#panel:${w.slug}"><span class="panel-num">${num}.</span>${escapeHtml(w.title)}</a>${flag}</li>`
+      : `<li><span class="panel-num">${num}.</span>${escapeHtml(p.title)} <span class="not-yet">not yet written</span>${flag}</li>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div id="arr-page">
+      <p class="panel-number-label">Volume ${vol.n}</p>
+      <h1 class="entry-title">${arrName(arr).replace(/^./, c => c.toUpperCase())}</h1>
+      <p class="entry-location">${written.size} of ${mine.length} panels written</p>
+      <div id="arr-map" class="arr-map"></div>
+      <p class="map-actions">
+        <a href="${maperatiLink(arr, mine)}" target="_blank" rel="noopener">Open in Maperati</a>
+        <a href="${geojsonDownload(arr, mine)}" download="paris-history-plaques-${ordinal(arr)}.geojson">Save the pins for Maperati</a>
+        <span class="legend"><span class="map-pin written small"></span> written <span class="map-pin small"></span> not yet written</span>
+      </p>
+      <ul class="arr-panel-list">${list}</ul>
+    </div>`;
+
+  if (pinned.length) drawMap(document.getElementById('arr-map'), pinned.map(p => {
+    const w = p.number != null && written.get(p.number);
+    return { lat: p.lat, lng: p.lng, label: String(p.number ?? '–'), written: !!w,
+             title: w ? w.title : p.title, href: w ? `#panel:${w.slug}` : null };
+  }));
+  else document.getElementById('arr-map').outerHTML = '<p class="map-offline">No map positions for this arrondissement yet.</p>';
+
+  document.querySelectorAll('#entry-list a').forEach(a => a.classList.remove('active'));
+  document.title = `${arrName(arr)} — Paris History Plaques`;
+}
+
 // ── Render: one panel ─────────────────────────────────────────
 
 async function renderPanel(p) {
-  const slugs = new Map((await getAllPanels()).map(x => [`${x.arrondissement}-${x.number}`, x.slug]));
+  const all = await getAllPanels();
+  const slugs = new Map(all.map(x => [`${x.arrondissement}-${x.number}`, x.slug]));
+  const i = all.findIndex(x => x.slug === p.slug);
+  const prev = all[i - 1], next = all[i + 1];   // reading order: arrondissement, then number
   const photoSrc = p.photo ? await photoUrl(p.photo) : null;
 
   const plaque = p.textUnavailable
@@ -168,11 +303,25 @@ async function renderPanel(p) {
         <h2>Background</h2>
         ${md(linkCrossRefs(p.background, p.arrondissement, slugs))}
       </div>
+      <div class="panel-map-wrap">
+        <div id="panel-map" class="panel-map"></div>
+        <p class="map-actions"><a href="#arr:${p.arrondissement}">See it on the ${arrName(p.arrondissement)} map</a></p>
+      </div>
       <details class="ref-notes">
         <summary>Reference notes (not in the book)</summary>
         ${notes}
       </details>
+      <nav class="prev-next">
+        ${prev ? `<a href="#panel:${prev.slug}">← ${prev.number}. ${escapeHtml(prev.title)}</a>` : '<span></span>'}
+        ${next ? `<a href="#panel:${next.slug}">${next.number}. ${escapeHtml(next.title)} →</a>` : '<span></span>'}
+      </nav>
     </article>`;
+
+  const place = (await loadPlaces()).find(x => x.arrondissement === p.arrondissement && x.number === p.number);
+  if (place && place.lat != null) drawMap(document.getElementById('panel-map'),
+    [{ lat: place.lat, lng: place.lng, label: String(p.number), written: true, title: p.title }], { zoom: 16 });
+  else document.querySelector('.panel-map-wrap').innerHTML =
+    `<p class="map-actions"><a href="#arr:${p.arrondissement}">See the ${arrName(p.arrondissement)} map</a> (no position for this panel yet)</p>`;
 
   document.querySelectorAll('#entry-list a').forEach(a => {
     const on = a.dataset.slug === p.slug;
@@ -211,7 +360,7 @@ async function renderIndex() {
         <div class="vol-row">
           <div class="vol-head"><span class="vol-name">Volume ${v.n}</span><span class="vol-range">${range}</span>
             ${bar(vDone, vTotal)}<span class="count">${vDone} of ${vTotal}</span></div>
-          <div class="arr-list">${v.arrs.map(a => `<span class="arr${done[a] ? ' started' : ''}">${ordinal(a)} <b>${done[a] || 0}/${TOTALS[a]}</b></span>`).join('')}</div>
+          <div class="arr-list">${v.arrs.map(a => `<a href="#arr:${a}" class="arr${done[a] ? ' started' : ''}">${ordinal(a)} <b>${done[a] || 0}/${TOTALS[a]}</b></a>`).join('')}</div>
         </div>`;
   }).join('');
 
@@ -258,7 +407,7 @@ async function buildSidebar() {
       <h2 class="volume-heading">Volume ${v.n}</h2>
       ${v.arrs.filter(a => byArr[a]).map(a => `
         <details class="sidebar-group" ${PHONE ? '' : 'open'}>
-          <summary class="sidebar-group-header">${arrName(a)} <span class="sidebar-count">${byArr[a].length}/${TOTALS[a]}</span></summary>
+          <summary class="sidebar-group-header"><a href="#arr:${a}" class="arr-link">${arrName(a)}</a> <span class="sidebar-count">${byArr[a].length}/${TOTALS[a]}</span></summary>
           <ul class="sidebar-group-list">${byArr[a].map(p => `
             <li><a href="#panel:${p.slug}" data-slug="${p.slug}" class="${p.slug === active ? 'active' : ''}"><span class="panel-num">${p.number}.</span>${escapeHtml(p.title)}</a></li>`).join('')}
           </ul>
@@ -273,6 +422,10 @@ async function route() {
     const p = await getPanel(decodeURIComponent(hash.slice(7)));
     if (p) await renderPanel(p);
     else document.getElementById('content').innerHTML = '<p class="state-msg">That panel isn\'t in the wiki.</p>';
+  } else if (hash.startsWith('#arr:')) {
+    const arr = Number(hash.slice(5));
+    if (TOTALS[arr]) await renderArrondissement(arr);
+    else await renderIndex();
   } else {
     await renderIndex();
   }
@@ -355,6 +508,14 @@ async function boot() {
   }
 
   await buildSidebar();
+  // An arrondissement's name in the menu opens its map page (rather than folding the list).
+  document.getElementById('entry-list').addEventListener('click', e => {
+    const a = e.target.closest('.arr-link');
+    if (!a) return;
+    e.preventDefault();
+    location.hash = a.getAttribute('href');
+    const g = a.closest('details'); if (g && !PHONE) g.open = true;
+  });
   initSearch();
   document.getElementById('site-title').addEventListener('click', () => { location.hash = ''; });
   window.addEventListener('hashchange', route);

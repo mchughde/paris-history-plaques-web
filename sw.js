@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plaques-v18';
+const CACHE_NAME = 'plaques-v19';
 
 const PRECACHE = [
   './',
@@ -12,6 +12,8 @@ const PRECACHE = [
   './images/paddle-logo.svg',
   './images/pelle-starck.jpg',
   'https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js',
+  'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
+  'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
 ];
 
 self.addEventListener('install', event => {
@@ -32,7 +34,10 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   // Private panels: from the GitHub API with a key (website) or panels.js (Mac).
   // Never cache them here; the app keeps them itself, in IndexedDB.
-  if (url.hostname === 'api.github.com' || url.pathname.endsWith('/panels.js')) return;
+  if (url.hostname === 'api.github.com' || url.pathname.endsWith('/panels.js')
+      || url.pathname.includes('/data/') || url.pathname.includes('/photos/')) return;
+  // Map tiles: straight from the network, never stored (they'd fill the device).
+  if (url.hostname.endsWith('openfreemap.org')) return;
 
   event.respondWith(
     fetch(event.request).then(response => {
