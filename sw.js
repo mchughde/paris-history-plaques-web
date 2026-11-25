@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plaques-v24';
+const CACHE_NAME = 'plaques-v25';
 
 const PRECACHE = [
   './',
@@ -17,7 +17,10 @@ const PRECACHE = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE)));
+  // cache: 'reload' skips the browser's own 10-minute copy (GitHub Pages sends max-age=600),
+  // so a new version is picked up at once rather than the old files being stored again.
+  event.waitUntil(caches.open(CACHE_NAME).then(cache =>
+    cache.addAll(PRECACHE.map(u => new Request(u, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -39,8 +42,13 @@ self.addEventListener('fetch', event => {
   // Map tiles: straight from the network, never stored (they'd fill the device).
   if (url.hostname.endsWith('openfreemap.org')) return;
 
+  // The app's own files: always check with the server ('no-cache'), never the browser's
+  // 10-minute copy, so a change shows up the next time the page is opened.
+  const fresh = url.origin === self.location.origin
+    ? fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
+    : fetch(event.request);
   event.respondWith(
-    fetch(event.request).then(response => {
+    fresh.then(response => {
       if (!response || response.status !== 200) return response;
       const clone = response.clone();
       caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
