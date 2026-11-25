@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paris History Plaques</title>
+  <meta name="description" content="A personal catalogue of the Panneaux Histoire de Paris" />
+  <meta name="theme-color" content="#1a1a1a" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./style.css" />
+  <!-- Markdown renderer (exact version with checksum: all Pages apps share one origin) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js" integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="shell">
+
+  <header id="topbar">
+    <span id="site-title"><img src="./images/paddle-logo.svg" class="title-logo" alt="" />Paris History Plaques</span>
+    <div id="search-wrap">
+      <input id="search" type="search" placeholder="Search panels…"
+             autocomplete="off" spellcheck="false" />
+      <div id="search-results"></div>
+    </div>
+  </header>
+
+  <nav id="sidebar">
+    <div id="entry-list"></div>
+  </nav>
+
+  <main id="content">
+    <p class="state-msg">Loading…</p>
+  </main>
+
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

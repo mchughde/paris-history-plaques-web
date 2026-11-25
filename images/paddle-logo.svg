@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="480" viewBox="0 0 120 480">
+  <!-- A plain oar-shaped paddle sign, drawn for this project (not a copy of the real panel) -->
+  <path d="M22 14 Q60 2 98 14 L98 196 Q98 214 86 226 L68 244 L68 466 Q68 474 60 474 Q52 474 52 466 L52 244 L34 226 Q22 214 22 196 Z" fill="#3b3833"/>
+  <rect x="34" y="40" width="52" height="7" rx="2" fill="#b5322a"/>
+  <rect x="34" y="56" width="40" height="4" rx="2" fill="#b5322a"/>
+  <rect x="34" y="78" width="52" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="88" width="52" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="98" width="46" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="108" width="52" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="118" width="40" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="128" width="50" height="3" rx="1.5" fill="#d9d4cc"/>
+  <rect x="34" y="138" width="36" height="3" rx="1.5" fill="#d9d4cc"/>
+</svg>
