@@ -206,9 +206,19 @@ function drawMap(container, pins, { zoom = 16 } = {}) {
 
 // The arrondissement's panels as a Maperati map (its read-only view, as the
 // Paris Parks walks guide uses), encoded the way Maperati's share.js does.
+// Maperati numbers stops 1, 2, 3… in order when they have no category, so the numbers
+// match the panels only when every panel from 1 up has a position. Otherwise (a gap,
+// or an unnumbered panel) the stops get Maperati's monument icon instead, and the
+// panel number is in each stop's name.
+function maperatiStops(places) {
+  const pinned = places.filter(p => p.lat != null);
+  const numbered = pinned.every((p, i) => p.number === i + 1);
+  return pinned.map(p => ({ lat: p.lat, lng: p.lng, category: numbered ? '' : 'monument',
+                            name: `${p.number ?? '–'}. ${p.title}` }));
+}
+
 function maperatiLink(arr, places) {
-  const stops = places.filter(p => p.lat != null).map(p =>
-    [+p.lat.toFixed(5), +p.lng.toFixed(5), 0, 'monument', `${p.number ?? '–'}. ${p.title}`]);
+  const stops = maperatiStops(places).map(s => [+s.lat.toFixed(5), +s.lng.toFixed(5), 0, s.category, s.name]);
   const payload = { v: 1, n: `Paris History Plaques — ${arrName(arr)}`, m: 'walking', t: '', r: '', s: stops };
   const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   return `https://mchughde.github.io/maperati/v3/embed.html#${b64}`;
@@ -216,9 +226,9 @@ function maperatiLink(arr, places) {
 
 // The same pins as a GeoJSON file, which Maperati's Import can load for planning a walk.
 function geojsonDownload(arr, places) {
-  const fc = { type: 'FeatureCollection', features: places.filter(p => p.lat != null).map(p => ({
-    type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
-    properties: { name: `${p.number ?? '–'}. ${p.title}`, category: 'monument' } })) };
+  const fc = { type: 'FeatureCollection', features: maperatiStops(places).map(s => ({
+    type: 'Feature', geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
+    properties: { name: s.name, ...(s.category ? { category: s.category } : {}) } })) };
   return URL.createObjectURL(new Blob([JSON.stringify(fc, null, 1)], { type: 'application/geo+json' }));
 }
 
