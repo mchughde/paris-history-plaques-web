@@ -1013,3 +1013,17 @@ a.arr:hover { text-decoration: underline; }
   .arr-panel-list { columns: 1; }
   .map-actions .legend { margin-left: 0; }
 }
+
+/* ── Fact-check (wiki only) ── */
+.fact-check { margin-top: 1rem; }
+.fc-meta { font-size: 0.78rem; color: var(--text-muted); margin: 0.6rem 0; }
+.fact-check h4 { font: 600 0.75rem var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted); margin: 1.1rem 0 0.4rem; }
+.fc-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; line-height: 1.45; }
+.fc-table th { text-align: left; font-weight: 600; color: var(--text-muted); padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); }
+.fc-table td { vertical-align: top; padding: 0.4rem; border-bottom: 1px solid var(--border); }
+.fc-table td:first-child { width: 1.2rem; }
+.fc-ok { color: #3b7a3b; } .fc-flag { color: #b5322a; font-weight: 700; }
+.fc-note { color: #8a5a00; margin-top: 0.25rem; }
+.fc-src { color: var(--text-muted); font-size: 0.72rem; margin-top: 0.2rem; }
+.fc-findings { margin: 0.4rem 0 0.6rem 1.2rem; font-size: 0.85rem; color: #8a5a00; }

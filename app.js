@@ -277,6 +277,28 @@ async function renderArrondissement(arr) {
   document.title = `${arrName(arr)} — Paris History Plaques`;
 }
 
+// The two-part fact-check (translation; background against the saved Wikipedia pages),
+// shown folded under the reference notes. Never in the book.
+function factCheckHtml(p) {
+  const fc = p.factCheck;
+  if (!fc) return `<details class="ref-notes"><summary>Fact-check (not in the book)</summary>
+    <p class="ref-notes-empty">Not fact-checked yet.</p></details>`;
+  const mark = ok => ok === false ? '<span class="fc-flag">✗</span>' : '<span class="fc-ok">✓</span>';
+  const tr = (fc.translation || []).map(r => `<tr><td>${mark(r.ok)}</td><td lang="fr">${escapeHtml(r.fr)}</td>
+    <td>${escapeHtml(r.en)}${r.note ? `<div class="fc-note">${escapeHtml(r.note)}</div>` : ''}</td></tr>`).join('');
+  const bg = (fc.background || []).map(r => `<tr><td>${mark(r.ok)}</td><td>${escapeHtml(r.claim)}</td>
+    <td>${r.quote ? `“${escapeHtml(r.quote)}”<div class="fc-src">${escapeHtml(r.source || '')}</div>` : ''}
+    ${r.note ? `<div class="fc-note">${escapeHtml(r.note)}</div>` : ''}</td></tr>`).join('');
+  const flags = [...(fc.translation || []), ...(fc.background || [])].filter(r => r.ok === false).length;
+  return `<details class="ref-notes fact-check">
+    <summary>Fact-check (not in the book) · ${flags ? `${flags} to look at` : 'all clear'}</summary>
+    <p class="fc-meta">Checked ${escapeHtml(fc.date || '')} against the Wikipedia pages saved in the project.</p>
+    ${(fc.findings || []).length ? `<ul class="fc-findings">${fc.findings.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
+    <h4>Translation</h4><table class="fc-table"><tr><th></th><th>French</th><th>English</th></tr>${tr}</table>
+    <h4>Background against Wikipedia</h4><table class="fc-table"><tr><th></th><th>Statement</th><th>Wikipedia says</th></tr>${bg}</table>
+  </details>`;
+}
+
 // ── Render: one panel ─────────────────────────────────────────
 
 async function renderPanel(p) {
@@ -321,6 +343,7 @@ async function renderPanel(p) {
         <summary>Reference notes (not in the book)</summary>
         ${notes}
       </details>
+      ${factCheckHtml(p)}
       <nav class="prev-next">
         ${prev ? `<a href="#panel:${prev.slug}">← ${prev.number}. ${escapeHtml(prev.title)}</a>` : '<span></span>'}
         ${next ? `<a href="#panel:${next.slug}">${next.number}. ${escapeHtml(next.title)} →</a>` : '<span></span>'}
