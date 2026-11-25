@@ -874,6 +874,11 @@ body.touch:not(.menu-open) #sidebar { display: none; }
 @media (max-width: 700px) {        /* iPhone: search gets its own line under the title */
   body.touch #topbar { flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.6rem 1rem; }
   body.touch #search-wrap { flex: 1 1 100%; }
+  /* The menu is behind its button now, so list one panel per line, as on the iPad */
+  body.touch #entry-list,
+  body.touch .sidebar-group-list { display: block; }
+  body.touch .sidebar-group-list { padding-left: 0.5rem; }
+  body.touch .sidebar-group-list li { margin: 0 0 0.1rem; }
 }
 
 /* ── Access-key screen (public website only) ─────────────── */
