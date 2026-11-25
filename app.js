@@ -447,6 +447,30 @@ async function buildSidebar() {
         </details>`).join('')}`).join('');
 }
 
+// ── Menu button (iPad and iPhone only) ─────────────────────────
+// On a touch screen the menu is hidden so the entry gets the whole width; the
+// ☰ Menu button shows or hides it, and choosing a page hides it again. The Mac
+// (mouse or trackpad) keeps the menu always open and never shows the button.
+
+const TOUCH = matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+function initTouchMenu() {
+  if (!TOUCH) return;
+  const btn = document.getElementById('menu-btn');
+  document.body.classList.add('touch');
+  const set = open => {
+    document.body.classList.toggle('menu-open', open);
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = open ? '✕ Close menu' : '☰ Menu';
+  };
+  btn.addEventListener('click', () => {
+    set(!document.body.classList.contains('menu-open'));
+    if (document.body.classList.contains('menu-open')) window.scrollTo(0, 0);
+  });
+  window.addEventListener('hashchange', () => set(false));
+  set(false);
+}
+
 // ── Router ────────────────────────────────────────────────────
 
 async function route() {
@@ -549,6 +573,7 @@ async function boot() {
     location.hash = a.getAttribute('href');
     const g = a.closest('details'); if (g && !PHONE) g.open = true;
   });
+  initTouchMenu();
   initSearch();
   document.getElementById('site-title').addEventListener('click', () => { location.hash = ''; });
   window.addEventListener('hashchange', route);
