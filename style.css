@@ -999,9 +999,15 @@ body.touch:not(.menu-open) #sidebar { display: none; }
 }
 
 /* Each panel's picture, under its title and location */
-.panel-photo { margin: -1rem 0 2.25rem; max-width: var(--max-width); }
-.panel-photo img { display: block; max-width: 100%; max-height: 440px; width: auto; height: auto; border-radius: 4px; }
-.panel-photo figcaption { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.45rem; }
+/* The figure shrinks to the picture's width and sits centred, so a tall (portrait) picture
+   doesn't leave its credit running the full width of the page; the credit wraps under the
+   picture instead (contain: inline-size stops the credit's length from widening the figure).
+   A hairline frame keeps a picture on a white ground (e.g. Panel 19's drawing) from looking
+   like a blank box against the page. */
+.panel-photo { margin: -1rem auto 2.25rem; width: fit-content; max-width: min(100%, var(--max-width)); }
+.panel-photo img { display: block; max-width: 100%; max-height: 440px; width: auto; height: auto;
+                   border-radius: 4px; border: 1px solid var(--border); box-sizing: border-box; }
+.panel-photo figcaption { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.45rem; contain: inline-size; }
 .panel-photo figcaption a { color: inherit; }
 
 /* ── Maps (arrondissement pages and each panel) ── */
