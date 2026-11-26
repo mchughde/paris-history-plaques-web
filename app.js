@@ -166,6 +166,27 @@ async function loadPlaces() {
 // Maps use the same engine and map style as Maperati (MapLibre, OpenFreeMap tiles from
 // OpenStreetMap data). They need an internet connection; the text doesn't.
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+const MAP_CREDIT = 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap';
+
+// The map's credit line, shown instead of MapLibre's own attribution control (the map
+// is created with attributionControl: false). MapLibre 4 builds its credit line from HTML
+// the map provider sends, and its clean-up of that HTML has a known flaw
+// (GHSA-jrc7-96c5-q579, fixed only in MapLibre 6): the provider's server could slip in
+// code that runs on mchughde.github.io, where every Pages app keeps its saved data. This
+// shows only the fixed plain text above, so nothing from outside reaches the page.
+// Same fix as Maperati's MapCredit (7 November 2026).
+class MapCredit {
+  onAdd() {
+    this._container = document.createElement('div');
+    this._container.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+    const inner = document.createElement('div');
+    inner.className = 'maplibregl-ctrl-attrib-inner';
+    inner.textContent = MAP_CREDIT;
+    this._container.appendChild(inner);
+    return this._container;
+  }
+  onRemove() { this._container.remove(); }
+}
 
 function pinElement(label, written, size = 26) {
   const el = document.createElement('div');
@@ -185,7 +206,7 @@ function drawMap(container, pins, { zoom = 16 } = {}) {
     container, style: MAP_STYLE, attributionControl: false,
     center: [pins[0].lng, pins[0].lat], zoom, cooperativeGestures: PHONE,
   });
-  map.addControl(new maplibregl.AttributionControl({ compact: true }));   // the map style supplies its own credit
+  map.addControl(new MapCredit(), 'bottom-right');   // fixed plain text, never the provider's HTML
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   for (const p of pins) {
     const el = pinElement(p.label, p.written);

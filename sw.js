@@ -1,4 +1,4 @@
-const CACHE_NAME = 'plaques-v25';
+const CACHE_NAME = 'plaques-v26';
 
 const PRECACHE = [
   './',
