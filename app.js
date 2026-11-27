@@ -213,8 +213,11 @@ function drawMap(container, pins, { zoom = 16 } = {}) {
     el.title = p.title;
     if (p.href) { el.classList.add('link'); el.addEventListener('click', () => { location.hash = p.href; }); }
     const marker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]);
+    // A pin with no link is either a panel not yet written (arrondissement map) or the
+    // panel the page is already showing (panel map); only the first says "Not yet written".
     if (!p.href) marker.setPopup(new maplibregl.Popup({ offset: 14, closeButton: false })
-      .setHTML(`<b>${escapeHtml(p.label)}. ${escapeHtml(p.title)}</b><br><span>Not yet written</span>`));
+      .setHTML(`<b>${escapeHtml(p.label)}. ${escapeHtml(p.title)}</b>` +
+               (p.written ? '' : '<br><span>Not yet written</span>')));
     marker.addTo(map);
   }
   if (pins.length > 1) {
